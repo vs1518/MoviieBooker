@@ -14,7 +14,7 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.usersService.findOneByEmail(email);
 
-    if (!user || user.password !== password) {  // ⚠️ Hacher le mot de passe en production !
+    if (!user || user.password !== password) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
