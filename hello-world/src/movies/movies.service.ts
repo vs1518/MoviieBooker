@@ -1,40 +1,62 @@
-import { Injectable } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { lastValueFrom } from 'rxjs';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateMovieDto } from './dto/create-movie.dto';
+import { Movie } from './movie.interface';
 
 @Injectable()
 export class MoviesService {
   private readonly apiUrl: string;
   private readonly apiKey: string;
+  private readonly movies: Movie[] = [];
 
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
-  ) {
-    this.apiUrl = this.configService.get<string>('TMDB_API_URL') || 'https://api.themoviedb.org/3';
-    this.apiKey = this.configService.get<string>('TMDB_API_KEY') || '';
+  constructor() {
+    this.apiUrl = 'https://example.com/api';
+    this.apiKey = 'your_api_key';
   }
 
-  async getNowPlaying(page = 1) {
-    const url = `${this.apiUrl}/movie/now_playing?api_key=${this.apiKey}&page=${page}`;
-    const response = await lastValueFrom(this.httpService.get(url));  // ✅ Convertit Observable en Promise
-    return response.data;
+  createMovie(createMovieDto: CreateMovieDto): Movie {
+    const newMovie: Movie = {
+      id: Date.now(),
+      title: createMovieDto.title,
+      duration: createMovieDto.duration,
+      description: createMovieDto.description,
+      reservations: [],
+    };
+
+    this.movies.push(newMovie);
+    return newMovie;
   }
 
-  async searchMovies(query: string, page = 1) {
-    if (!this.apiKey || !this.apiUrl) {
-        throw new Error('TMDB API Key or URL is missing');  // ✅ Gestion d’erreur
-      }
-    const url = `${this.apiUrl}/search/movie?api_key=${this.apiKey}&query=${query}&page=${page}`;
-    const response = await lastValueFrom(this.httpService.get(url));
-    return response.data;
+  findAllMovies(): Movie[] {
+    return this.movies;
   }
 
-  // 🔹 Obtenir les détails d’un film spécifique
-  async getMovieDetails(movieId: number) {
-    const url = `${this.apiUrl}/movie/${movieId}?api_key=${this.apiKey}`;
-    const response = await lastValueFrom(this.httpService.get(url));
-    return response.data;
+  reserveMovie(movieId: number, userId: number) {
+    const movie = this.movies.find(m => m.id === movieId);
+    if (!movie) {
+      throw new NotFoundException('Film non trouvé');
+    }
+
+    const reservation = {
+      id: Date.now(),
+      userId,
+    };
+
+    movie.reservations.push(reservation);
+    return { message: 'Réservation effectuée avec succès', reservation };
+  }
+
+  cancelReservation(movieId: number, reservationId: number) {
+    const movie = this.movies.find(m => m.id === movieId);
+    if (!movie) {
+      throw new NotFoundException('Film non trouvé');
+    }
+
+    const reservationIndex = movie.reservations.findIndex(r => r.id === reservationId);
+    if (reservationIndex === -1) {
+      throw new NotFoundException('Réservation non trouvée');
+    }
+
+    movie.reservations.splice(reservationIndex, 1);
+    return { message: 'Réservation annulée avec succès' };
   }
 }
