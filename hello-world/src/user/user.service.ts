@@ -23,8 +23,8 @@ export class UserService {
 
   constructor(private jwtService: JwtService) {}
 
-  async findOne(username: string): Promise<User | undefined> {
-    return this.users.find(user => user.username === username);
+  async findOneByEmail(email: string): Promise<User | undefined> {
+    return this.users.find(user => user.username === email);
   }
 
   async register(username: string, email: string, password: string): Promise<{ message: string }> {

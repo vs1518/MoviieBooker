@@ -1,15 +1,27 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { UserController } from './user/user.controller';
-import { UserService } from './user/user.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { JwtStrategy } from './auth/jwt.strategy';
+import { MoviesModule } from './movies/movies.module';
 
 @Module({
-  imports: [UserModule, UserModule, AuthModule],
-  controllers: [AppController, UserController, UserController],
-  providers: [AppService, UserService, UserService, JwtStrategy],
+  imports: [
+    ConfigModule.forRoot(),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'mot_de_passe',
+      database: process.env.DB_NAME || 'moviiebooker',
+      autoLoadEntities: true,
+      synchronize: true,
+      logging: true,
+    }),
+    UserModule,
+    AuthModule,
+    MoviesModule,
+  ],
 })
 export class AppModule {}

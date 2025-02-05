@@ -9,6 +9,15 @@ async function bootstrap() {
     .setTitle('MoviieBooker API')
     .setDescription('API documentation for MoviieBooker')
     .setVersion('1.0')
+    .addBearerAuth(
+      { 
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Entrez votre token JWT ici',
+      },
+      'access-token',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
