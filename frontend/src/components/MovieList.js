@@ -50,7 +50,7 @@ const MovieList = () => {
 
       alert('Réservation effectuée avec succès !');
       setShowReservationModal(false);
-    } catch (error) {
+    } catch (error) {ùù
       alert(error.response?.data?.message || 'Erreur lors de la réservation');
     }
   };

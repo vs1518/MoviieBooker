@@ -4,6 +4,7 @@ import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
+import { User } from '../user/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -113,5 +114,25 @@ export class AuthService {
       
       throw new BadRequestException('Erreur lors de la connexion. Veuillez réessayer.');
     }
+  }
+
+  async validateUser(email: string, password: string): Promise<User | null> {
+    // Logique pour valider l'utilisateur
+    const user = await this.findUserByEmail(email); // Implémentez cette méthode
+    if (user && user.password === password) { // Assurez-vous de ne pas stocker les mots de passe en clair
+      return user;
+    }
+    return null;
+  }
+
+  async generateToken(user: User): Promise<string> {
+    // Logique pour générer un token JWT
+    // Remplacez ceci par votre logique de génération de token
+    return 'token'; // Remplacez par la génération réelle du token
+  }
+
+  private async findUserByEmail(email: string): Promise<User | null> {
+    // Implémentez cette méthode pour trouver un utilisateur par email
+    return null; // Remplacez par la logique de recherche dans la base de données
   }
 }
