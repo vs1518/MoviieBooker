@@ -1,62 +1,76 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateMovieDto } from './dto/create-movie.dto';
-import { Movie } from './movie.interface';
+import { Movie } from './movie.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Reservation } from '../reservation/entities/reservation.entity';
 
 @Injectable()
 export class MoviesService {
-  private readonly apiUrl: string;
-  private readonly apiKey: string;
-  private readonly movies: Movie[] = [];
+  constructor(
+    @InjectRepository(Movie)
+    private movieRepository: Repository<Movie>,
+    @InjectRepository(Reservation)
+    private reservationRepository: Repository<Reservation>
+  ) {}
 
-  constructor() {
-    this.apiUrl = 'https://example.com/api';
-    this.apiKey = 'your_api_key';
+  async findAll(): Promise<Movie[]> {
+    return await this.movieRepository.find();
   }
 
-  createMovie(createMovieDto: CreateMovieDto): Movie {
-    const newMovie: Movie = {
-      id: Date.now(),
+  async findOne(id: number): Promise<Movie> {
+    const movie = await this.movieRepository.findOne({ where: { id } });
+    if (!movie) {
+      throw new NotFoundException(`Film avec l'ID ${id} non trouvé`);
+    }
+    return movie;
+  }
+
+  async create(movie: Partial<Movie>): Promise<Movie> {
+    const newMovie = this.movieRepository.create(movie);
+    return await this.movieRepository.save(newMovie);
+  }
+
+  async createMovie(createMovieDto: CreateMovieDto): Promise<Movie> {
+    const movie = this.movieRepository.create({
       title: createMovieDto.title,
       duration: createMovieDto.duration,
       description: createMovieDto.description,
-      reservations: [],
-    };
-
-    this.movies.push(newMovie);
-    return newMovie;
+    });
+    return await this.movieRepository.save(movie);
   }
 
-  findAllMovies(): Movie[] {
-    return this.movies;
-  }
-
-  reserveMovie(movieId: number, userId: number) {
-    const movie = this.movies.find(m => m.id === movieId);
+  async reserveMovie(movieId: number, userId: number) {
+    const movie = await this.findOne(movieId);
     if (!movie) {
-      throw new NotFoundException('Film non trouvé');
+      throw new NotFoundException(`Film avec l'ID ${movieId} non trouvé`);
     }
 
-    const reservation = {
-      id: Date.now(),
+    const reservation = this.reservationRepository.create({
+      movieId,
       userId,
-    };
+      movieTitle: movie.title,
+      startTime: new Date(),
+      endTime: new Date(Date.now() + movie.duration * 60 * 1000),
+    });
 
-    movie.reservations.push(reservation);
-    return { message: 'Réservation effectuée avec succès', reservation };
+    await this.reservationRepository.save(reservation);
+    return { 
+      message: 'Réservation effectuée avec succès',
+      reservation 
+    };
   }
 
-  cancelReservation(movieId: number, reservationId: number) {
-    const movie = this.movies.find(m => m.id === movieId);
-    if (!movie) {
-      throw new NotFoundException('Film non trouvé');
-    }
+  async cancelReservation(movieId: number, reservationId: number) {
+    const reservation = await this.reservationRepository.findOne({
+      where: { id: reservationId, movieId }
+    });
 
-    const reservationIndex = movie.reservations.findIndex(r => r.id === reservationId);
-    if (reservationIndex === -1) {
+    if (!reservation) {
       throw new NotFoundException('Réservation non trouvée');
     }
 
-    movie.reservations.splice(reservationIndex, 1);
+    await this.reservationRepository.remove(reservation);
     return { message: 'Réservation annulée avec succès' };
   }
 }

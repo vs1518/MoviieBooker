@@ -13,7 +13,13 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   @ApiResponse({ status: 400, description: 'Erreur de validation' })
   async register(@Body() registerDto: RegisterDto) {
-    return this.register(registerDto);
+    try {
+      const result = await this.authService.register(registerDto);
+      return result;
+    } catch (error) {
+      console.error('Erreur d\'inscription:', error);
+      throw error;
+    }
   }
 
   @Post('login')

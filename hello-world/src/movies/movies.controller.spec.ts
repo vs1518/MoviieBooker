@@ -1,7 +1,7 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MoviesController } from './movies.controller';
 import { MoviesService } from './movies.service';
-import { NotFoundException } from '@nestjs/common';
 
 describe('MoviesController', () => {
   let controller: MoviesController;
@@ -21,11 +21,11 @@ describe('MoviesController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should reserve a movie via the controller', () => {
+  it('should reserve a movie via the controller', async () => {
     const movie = service.createMovie({ title: 'Matrix', duration: 136, description: 'Action/SF' });
     const userId = 3;
 
-    const result = controller.reserveMovie(movie.id, userId);
+    const result = await controller.reserve(movie.id, userId);
     
     expect(result).toBeDefined();
     expect(result.reservation).toHaveProperty('id');

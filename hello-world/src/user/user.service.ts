@@ -4,11 +4,16 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
-export type User = any;
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+}
 
 @Injectable()
 export class UserService {
-  private users = [
+  private users: User[] = [
     {
       id: 1,
       username: 'valeriya',
@@ -25,56 +30,99 @@ export class UserService {
 
   constructor(private jwtService: JwtService) {}
 
-  getAllUsers() {
-    return this.users; // Retourne simplement la liste des utilisateurs
+  getAllUsers(): User[] {
+    return this.users;
   }
 
   async findOneByEmail(email: string): Promise<User | undefined> {
     return this.users.find(user => user.email === email);
   }
 
-  addUser(user: User) {
+  async findOneByUsername(username: string): Promise<User | undefined> {
+    return this.users.find(user => user.username === username);
+  }
+
+  async findOneById(id: number): Promise<User | undefined> {
+    return this.users.find(user => user.id === id);
+  }
+
+  addUser(user: User): void {
     this.users.push(user);
   }
 
-  async register(registerDto: RegisterDto): Promise<{ message: string }> {
-    const { username, email, password } = registerDto;
-    
-    const existingUser = this.users.find(user => user.email === email);
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
+  async register(registerDto: RegisterDto): Promise<{ message: string; user: Partial<User> }> {
+    try {
+      const { username, email, password } = registerDto;
+
+      // Vérification de l'email existant
+      const existingEmail = await this.findOneByEmail(email);
+      if (existingEmail) {
+        throw new BadRequestException('Cet email est déjà utilisé');
+      }
+
+      // Vérification du nom d'utilisateur existant
+      const existingUsername = await this.findOneByUsername(username);
+      if (existingUsername) {
+        throw new BadRequestException('Ce nom d\'utilisateur est déjà pris');
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      const newUser: User = {
+        id: this.users.length + 1,
+        username,
+        email,
+        password: hashedPassword,
+      };
+
+      this.users.push(newUser);
+
+      // Retourner l'utilisateur sans le mot de passe
+      const { password: _, ...userWithoutPassword } = newUser;
+      return {
+        message: 'Inscription réussie',
+        user: userWithoutPassword
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      throw error;
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const newUser = {
-      id: this.users.length + 1,
-      username,
-      email,
-      password: hashedPassword,
-    };
-
-    this.users.push(newUser);
-
-    return { message: 'User registered successfully' };
   }
 
-  async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+  async login(loginDto: LoginDto): Promise<{ access_token: string; user: Partial<User> }> {
+    try {
+      const { email, password } = loginDto;
 
-    const user = this.users.find(user => user.email === email);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      const user = await this.findOneByEmail(email);
+      if (!user) {
+        throw new UnauthorizedException('Email ou mot de passe incorrect');
+      }
+
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        throw new UnauthorizedException('Email ou mot de passe incorrect');
+      }
+
+      const payload = { sub: user.id, email: user.email, username: user.username };
+      
+      // Retourner le token et les informations de l'utilisateur sans le mot de passe
+      const { password: _, ...userWithoutPassword } = user;
+      return {
+        access_token: this.jwtService.sign(payload),
+        user: userWithoutPassword
+      };
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      throw error;
     }
+  }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new UnauthorizedException('Invalid credentials');
+  async validateUser(email: string, password: string): Promise<Partial<User> | null> {
+    const user = await this.findOneByEmail(email);
+    if (user && await bcrypt.compare(password, user.password)) {
+      const { password: _, ...result } = user;
+      return result;
     }
-
-    const payload = { username: user.username, sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    return null;
   }
 }

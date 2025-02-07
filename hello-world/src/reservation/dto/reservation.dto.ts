@@ -1,11 +1,11 @@
-import { IsDateString, IsEmail, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateReservationDto {
-  @ApiProperty({ example: 'user@example.com', description: 'Email de l\'utilisateur' })
-  @IsEmail()
+  @ApiProperty({ example: 1, description: 'ID de l\'utilisateur' })
+  @IsNumber()
   @IsNotEmpty()
-  userEmail: string;
+  userId: number;
 
   @ApiProperty({ example: 1, description: 'ID du film à réserver' })
   @IsNumber()

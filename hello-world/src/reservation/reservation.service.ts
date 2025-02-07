@@ -1,21 +1,18 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateReservationDto } from './dto/reservation.dto';
-
-interface Reservation {
-  id: number;
-  userId: number;
-  movieId: number;
-  startTime: Date;
-  endTime: Date;
-}
+import { Reservation } from './entities/reservation.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between } from 'typeorm';
 
 @Injectable()
 export class ReservationService {
-  private reservations: Reservation[] = [];
-  private idCounter = 1;
+  constructor(
+    @InjectRepository(Reservation)
+    private reservationRepository: Repository<Reservation>
+  ) {}
 
-  async createReservation(userId: number, createReservationDto: CreateReservationDto) {
-    const { movieId, startTime } = createReservationDto;
+  async createReservation(createReservationDto: CreateReservationDto) {
+    const { movieId, userId, startTime } = createReservationDto;
 
     const movieIdNumber = Number(movieId);
     if (isNaN(movieIdNumber)) {
@@ -27,41 +24,58 @@ export class ReservationService {
       throw new BadRequestException('startTime doit être une date valide.');
     }
 
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // ✅ Durée du film = 2h
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
-    const conflict = this.reservations.some(res =>
-      res.userId === userId &&
-      ((start >= res.startTime && start < res.endTime) || (end > res.startTime && end <= res.endTime))
-    );
+    // Vérifier les conflits de réservation
+    const existingReservation = await this.reservationRepository.findOne({
+      where: {
+        userId,
+        startTime: Between(start, end),
+      }
+    });
 
-    if (conflict) {
+    if (existingReservation) {
       throw new BadRequestException('Un autre film est déjà réservé sur ce créneau.');
     }
 
-    const newReservation: Reservation = {
-      id: this.idCounter++,
+    const newReservation = this.reservationRepository.create({
       userId,
       movieId: movieIdNumber,
       startTime: start,
       endTime: end,
-    };
+    });
 
-    this.reservations.push(newReservation);
-    return newReservation;
+    return await this.reservationRepository.save(newReservation);
   }
 
   async getReservations(userId: number) {
-    return this.reservations.filter(res => res.userId === userId);
+    return await this.reservationRepository.find({
+      where: { userId },
+      order: { startTime: 'ASC' }
+    });
   }
 
   async cancelReservation(reservationId: number, userId: number) {
-    const index = this.reservations.findIndex(res => res.id === reservationId && res.userId === userId);
+    const reservation = await this.reservationRepository.findOne({
+      where: { id: reservationId, userId }
+    });
     
-    if (index === -1) {
+    if (!reservation) {
       throw new NotFoundException('Réservation introuvable.');
     }
 
-    this.reservations.splice(index, 1);
+    await this.reservationRepository.remove(reservation);
     return { message: 'Réservation annulée avec succès.' };
+  }
+
+  async reserveMovie(movieId: number, userId: number): Promise<Reservation> {
+    const reservation = this.reservationRepository.create({
+      movieId,
+      userId,
+      startTime: new Date(),
+      endTime: new Date(Date.now() + 2 * 60 * 60 * 1000)
+    });
+
+    return await this.reservationRepository.save(reservation);
   }
 }

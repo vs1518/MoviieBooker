@@ -1,15 +1,19 @@
-import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, getSchemaPath, ApiBearerAuth } from '@nestjs/swagger';
 import { MoviesService } from './movies.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
+import { Movie } from './movie.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@ApiTags('Films')
+@ApiTags('Movies')
 @ApiExtraModels(CreateMovieDto)
 @Controller('movies')
 export class MoviesController {
   constructor(private readonly moviesService: MoviesService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Créer un film' })
   @ApiResponse({
     status: 201,
@@ -31,32 +35,17 @@ export class MoviesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Récupérer la liste des films' })
-  @ApiResponse({
-    status: 200,
-    description: 'Liste des films récupérée avec succès',
-    content: {
-      'application/json': {
-        example: [
-          {
-            id: 1,
-            title: 'Inception',
-            duration: 120,
-            description: 'Un film de science-fiction de Christopher Nolan',
-          },
-          {
-            id: 2,
-            title: 'Titanic',
-            duration: 195,
-            description: 'Un film dramatique et romantique',
-          },
-        ],
-      },
-    },
-  })
-  async findAll() {
-    return this.moviesService.findAllMovies();
+  @ApiOperation({ summary: 'Récupérer tous les films' })
+  async findAll(): Promise<Movie[]> {
+    return this.moviesService.findAll();
   }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Récupérer un film par son ID' })
+  async findOne(@Param('id') id: string): Promise<Movie> {
+    return this.moviesService.findOne(+id);
+  }
+
   @Post(':id/reserve')
   @ApiOperation({ summary: 'Réserver un film' })
   @ApiResponse({ 

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/register.dto';
@@ -13,39 +13,105 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.usersService.findOneByEmail(registerDto.email);
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
+    try {
+      // Validation des données
+      if (!registerDto.email || !registerDto.password || !registerDto.username) {
+        throw new BadRequestException('Tous les champs sont requis');
+      }
+
+      // Vérification de l'existence de l'utilisateur
+      const existingUser = await this.usersService.findOneByEmail(registerDto.email);
+      if (existingUser) {
+        throw new ConflictException('Un utilisateur avec cet email existe déjà');
+      }
+
+      // Vérification de l'existence du nom d'utilisateur
+      const existingUsername = await this.usersService.findOneByUsername(registerDto.username);
+      if (existingUsername) {
+        throw new ConflictException('Ce nom d\'utilisateur est déjà pris');
+      }
+
+      // Hashage du mot de passe
+      const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+      // Création du nouvel utilisateur
+      const newUser = {
+        id: Date.now(),
+        username: registerDto.username,
+        email: registerDto.email,
+        password: hashedPassword,
+      };
+
+      // Ajout de l'utilisateur
+      await this.usersService.addUser(newUser);
+
+      // Génération du token JWT
+      const payload = { sub: newUser.id, email: newUser.email };
+      const access_token = this.jwtService.sign(payload);
+
+      // Retour de la réponse
+      return {
+        message: 'Inscription réussie',
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email
+        },
+        access_token
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      
+      if (error instanceof ConflictException || error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      throw new BadRequestException('Erreur lors de l\'inscription. Veuillez réessayer.');
     }
-
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const newUser = {
-      id: Date.now(), // Générer un ID unique
-      username: registerDto.username,
-      email: registerDto.email,
-      password: hashedPassword,
-    };
-
-    this.usersService.addUser(newUser);
-    return { message: 'User registered successfully' };
   }
 
-  async login(loginDto: LoginDto): Promise<{ access_token: string }> {
-    const { email, password } = loginDto;
-    const user = await this.usersService.findOneByEmail(email);
+  async login(loginDto: LoginDto): Promise<{ access_token: string; user: any }> {
+    try {
+      const { email, password } = loginDto;
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      // Validation des données
+      if (!email || !password) {
+        throw new BadRequestException('Email et mot de passe requis');
+      }
+
+      // Recherche de l'utilisateur
+      const user = await this.usersService.findOneByEmail(email);
+      if (!user) {
+        throw new UnauthorizedException('Email ou mot de passe incorrect');
+      }
+
+      // Vérification du mot de passe
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        throw new UnauthorizedException('Email ou mot de passe incorrect');
+      }
+
+      // Génération du token JWT
+      const payload = { sub: user.id, email: user.email };
+      
+      return {
+        access_token: this.jwtService.sign(payload),
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      throw new BadRequestException('Erreur lors de la connexion. Veuillez réessayer.');
     }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const payload = { sub: user.id, email: user.email };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
   }
 }

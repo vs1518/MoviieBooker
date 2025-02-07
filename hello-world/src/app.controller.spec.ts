@@ -1,21 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { UserService } from '../src/user/user.service';
+import { JwtService } from '@nestjs/jwt';
 
-describe('AppController', () => {
-  let appController: AppController;
+describe('UserService', () => {
+  let service: UserService;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
-      providers: [AppService],
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('mocked_token'),
+          },
+        },
+      ],
     }).compile();
 
-    appController = app.get<AppController>(AppController);
+    service = module.get<UserService>(UserService);
+    jwtService = module.get<JwtService>(JwtService);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-    });
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 });

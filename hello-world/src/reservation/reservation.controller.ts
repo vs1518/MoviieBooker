@@ -17,15 +17,15 @@ export class ReservationController {
   @ApiOperation({ summary: 'Créer une réservation' })
   async create(
     @Req() req,
-    @Body() body: CreateReservationDto
+    @Body() createReservationDto: CreateReservationDto
   ): Promise<any> {
-    const userId = req.user.userId;
+    createReservationDto.userId = req.user.userId;
 
-    if (!body.movieId || !body.startTime) {
+    if (!createReservationDto.movieId || !createReservationDto.startTime) {
       throw new BadRequestException('movieId et startTime sont obligatoires.');
     }
 
-    return this.reservationService.createReservation(userId, body);
+    return this.reservationService.createReservation(createReservationDto);
   }
 
   @Get()
