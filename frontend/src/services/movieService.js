@@ -4,10 +4,10 @@ const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const BASE_URL = process.env.REACT_APP_TMDB_BASE_URL;
 
 const movieService = {
-  getPopularMovies: async (page = 1) => {
+  getPopularMovies: async (page = 1, limit = 10) => {
     try {
       const response = await axios.get(
-        `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=fr-FR&page=${page}`
+        `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=fr-FR&page=${page}&limit=${limit}`
       );
       return response.data;
     } catch (error) {
@@ -16,10 +16,10 @@ const movieService = {
     }
   },
 
-  searchMovies: async (query, page = 1) => {
+  searchMovies: async (query, page = 1, limit = 10) => {
     try {
       const response = await axios.get(
-        `${BASE_URL}/search/movie?api_key=${API_KEY}&language=fr-FR&query=${query}&page=${page}`
+        `${BASE_URL}/search/movie?api_key=${API_KEY}&language=fr-FR&query=${query}&page=${page}&limit=${limit}`
       );
       return response.data;
     } catch (error) {

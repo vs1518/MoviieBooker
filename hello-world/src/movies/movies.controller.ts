@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, getSchemaPath, ApiBearerAuth } from '@nestjs/swagger';
-import { MoviesService } from './movies.service';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiExtraModels, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { Movie } from './movie.entity';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MoviesService } from './movies.service';
 
 @ApiTags('Movies')
 @ApiExtraModels(CreateMovieDto)

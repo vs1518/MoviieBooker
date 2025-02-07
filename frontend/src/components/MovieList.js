@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import movieService from '../services/movieService';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import movieService from '../services/movieService';
 
 const MovieList = () => {
   const [movies, setMovies] = useState([]);
@@ -10,13 +10,15 @@ const MovieList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [showReservationModal, setShowReservationModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null); // Ajoutez cet état pour le créneau
+  const [userId, setUserId] = useState(null); // Ajoutez cet état pour l'utilisateur
 
   const fetchMovies = useCallback(async () => {
     try {
       setLoading(true);
       const data = searchQuery
-        ? await movieService.searchMovies(searchQuery, currentPage)
-        : await movieService.getPopularMovies(currentPage);
+        ? await movieService.searchMovies(searchQuery, currentPage, 10)
+        : await movieService.getPopularMovies(currentPage, 10);
       setMovies(data.results);
     } catch (err) {
       setError('Erreur lors du chargement des films');
@@ -45,12 +47,14 @@ const MovieList = () => {
 
       const response = await api.post('/reservations', {
         movieId,
+        slot: selectedSlot, // Utilisez le créneau sélectionné
+        userId: user.id, // Utilisez l'ID de l'utilisateur
         startTime: new Date().toISOString()
       });
 
       alert('Réservation effectuée avec succès !');
       setShowReservationModal(false);
-    } catch (error) {ùù
+    } catch (error) {
       alert(error.response?.data?.message || 'Erreur lors de la réservation');
     }
   };
@@ -85,7 +89,10 @@ const MovieList = () => {
               </p>
               <p className="text-gray-700 line-clamp-3">{movie.overview}</p>
               <button
-                onClick={() => handleReservation(movie.id)}
+                onClick={() => {
+                  setSelectedMovie(movie);
+                  setShowReservationModal(true);
+                }}
                 className="mt-4 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
               >
                 Réserver

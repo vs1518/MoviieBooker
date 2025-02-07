@@ -5,6 +5,7 @@ import { ReservationService } from './reservation.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateReservationDto } from './dto/reservation.dto';
+import { Reservation } from './entities/reservation.entity';
 
 @Controller('reservations')
 @UseGuards(JwtAuthGuard)
