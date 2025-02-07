@@ -22,8 +22,18 @@ export class ReservationController {
   ): Promise<any> {
     createReservationDto.userId = req.user.userId;
 
-    if (!createReservationDto.movieId || !createReservationDto.startTime) {
-      throw new BadRequestException('movieId et startTime sont obligatoires.');
+    if (!createReservationDto.movieId || !createReservationDto.startTime || !createReservationDto.slot) {
+      throw new BadRequestException('movieId, startTime et slot sont obligatoires.');
+    }
+
+    // Vérifiez la disponibilité du créneau
+    const isSlotAvailable = await this.reservationService.isSlotAvailable(
+      createReservationDto.movieId,
+      createReservationDto.startTime
+    );
+
+    if (!isSlotAvailable) {
+      throw new BadRequestException('Le créneau horaire n\'est pas disponible.');
     }
 
     return this.reservationService.createReservation(createReservationDto);

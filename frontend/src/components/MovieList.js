@@ -45,16 +45,22 @@ const MovieList = () => {
         return;
       }
 
+      if (!selectedSlot) {
+        alert('Veuillez sélectionner un créneau horaire.');
+        return;
+      }
+
       const response = await api.post('/reservations', {
         movieId,
-        slot: selectedSlot, // Utilisez le créneau sélectionné
-        userId: user.id, // Utilisez l'ID de l'utilisateur
-        startTime: new Date().toISOString()
+        startTime: new Date().toISOString(),
+        slot: selectedSlot,
+        userId: user.id
       });
 
       alert('Réservation effectuée avec succès !');
       setShowReservationModal(false);
     } catch (error) {
+      console.error('Erreur lors de la réservation:', error);
       alert(error.response?.data?.message || 'Erreur lors de la réservation');
     }
   };

@@ -11,7 +11,7 @@ export class ReservationService {
     private reservationRepository: Repository<Reservation>
   ) {}
 
-  async createReservation(createReservationDto: CreateReservationDto) {
+  async createReservation(createReservationDto: CreateReservationDto): Promise<Reservation> {
     const { movieId, userId, startTime } = createReservationDto;
 
     const movieIdNumber = Number(movieId);
@@ -38,14 +38,14 @@ export class ReservationService {
       throw new BadRequestException('Un autre film est déjà réservé sur ce créneau.');
     }
 
-    const newReservation = this.reservationRepository.create({
+    const reservation = this.reservationRepository.create({
       userId,
       movieId: movieIdNumber,
       startTime: start,
       endTime: end,
     });
 
-    return await this.reservationRepository.save(newReservation);
+    return await this.reservationRepository.save(reservation);
   }
 
   async getReservations(userId: number) {
@@ -77,5 +77,13 @@ export class ReservationService {
     });
 
     return await this.reservationRepository.save(reservation);
+  }
+
+  async isSlotAvailable(movieId: number, startTime: string): Promise<boolean> {
+    const date = new Date(startTime);
+    const existingReservation = await this.reservationRepository.findOne({
+      where: { movieId, startTime: date }
+    });
+    return !existingReservation;
   }
 }
